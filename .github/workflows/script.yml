@@ -27,7 +27,7 @@ jobs:
   - name: Install Python dependencies
     uses: py-actions/py-dependency-install@v4
     with:
-      path: "path/to/requirements.txt"
+      path: ".github/workflows/requirements.txt"
       
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -35,4 +35,4 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Run a Python Script
-        run: python .github/workflows/MicrosoftRewardsBot.py --headless --fast
+        run: python MicrosoftRewardsBot.py --headless --fast
