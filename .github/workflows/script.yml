@@ -27,4 +27,5 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Run a Python Script
+        run: python .github/workflows/pip install -r requirements.txt
         run: python .github/workflows/MicrosoftRewardsBot.py --headless --fast
