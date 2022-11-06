@@ -21,11 +21,18 @@ jobs:
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
+    
+    steps:
+  # this Action should follow steps to set up Python build environment
+  - name: Install Python dependencies
+    uses: py-actions/py-dependency-install@v4
+    with:
+      path: "path/to/requirements.txt"
+      
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
 
       # Runs a single command using the runners shell
       - name: Run a Python Script
-        run: python .github/workflows/pip install -r requirements.txt
         run: python .github/workflows/MicrosoftRewardsBot.py --headless --fast
