@@ -14,8 +14,6 @@ import ipapi
 import requests
 from func_timeout import FunctionTimedOut, func_set_timeout
 from random_word import RandomWords
-
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
 from selenium.common.exceptions import (ElementNotInteractableException,
                                         NoAlertPresentException,
@@ -24,18 +22,17 @@ from selenium.common.exceptions import (ElementNotInteractableException,
                                         TimeoutException,
                                         UnexpectedAlertPresentException)
 from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 
 # Define user-agents
-PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/106.0.1370.37'
-MOBILE_USER_AGENT = 'Mozilla/5.0 (Linux; Android 10; HD1913) AppleWebKit/537.36 (KHTML, comme Gecko) Chrome/106.0.5249.126 Mobile Safari/537.36 EdgA/100.0.1185.50'
+PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.24'
+MOBILE_USER_AGENT = 'Mozilla/5.0 (Linux; Android 12; SM-N9750) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Mobile Safari/537.36 EdgA/107.0.1418.28'
 
+POINTS_COUNTER = 0
 
 # Global variables
-POINTS_COUNTER = 0
 FINISHED_ACCOUNTS = [] # added accounts when finished or those have same date as today date in LOGS at beginning.
 ERROR = True # A flag for when error occurred.
 MOBILE = True # A flag for when the account has mobile bing search, it is useful for accounts level 1 to pass mobile.
@@ -44,25 +41,25 @@ LOGS = {} # Dictionary of accounts to write in 'logs_accounts.txt'.
 FAST = False # When this variable set True then all possible delays reduced.
 
 # Define browser setup function
-def browserSetup(isMobile: bool, user_agent: str = PC_USER_AGENT, proxy: str = None) -> WebDriver:
+def browserSetup(isMobile: bool, user_agent: str = PC_USER_AGENT) -> WebDriver:
     # Create Chrome browser
     from selenium.webdriver.chrome.options import Options
     options = Options()
     if ARGS.session:
         if not isMobile:
-            options.add_argument(rf'--user-data-dir={Path(__file__).parent}/Profiles/{CURRENT_ACCOUNT}/PC')
+            options.add_argument(f'--user-data-dir={Path(__file__).parent}/Profiles/{CURRENT_ACCOUNT}/PC')
         else:
-            options.add_argument(rf'--user-data-dir={Path(__file__).parent}/Profiles/{CURRENT_ACCOUNT}/Mobile')
+            options.add_argument(f'--user-data-dir={Path(__file__).parent}/Profiles/{CURRENT_ACCOUNT}/Mobile')
     options.add_argument("user-agent=" + user_agent)
     options.add_argument('lang=' + LANG.split("-")[0])
     options.add_argument('--disable-blink-features=AutomationControlled')
-    prefs = {"profile.default_content_setting_values.geolocation" :2,
+    prefs = {"profile.default_content_setting_values.geolocation": 2,
             "credentials_enable_service": False,
             "profile.password_manager_enabled": False,
             "webrtc.ip_handling_policy": "disable_non_proxied_udp",
             "webrtc.multiple_routes_enabled": False,
             "webrtc.nonproxied_udp_enabled" : False}
-    options.add_experimental_option("prefs",prefs)
+    options.add_experimental_option("prefs", prefs)
     options.add_experimental_option("useAutomationExtension", False)
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     if ARGS.headless:
@@ -72,9 +69,7 @@ def browserSetup(isMobile: bool, user_agent: str = PC_USER_AGENT, proxy: str = N
     if platform.system() == 'Linux':
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-    if proxy:
-        options.add_argument(f"--proxy-server={proxy}")
-    chrome_browser_obj = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    chrome_browser_obj = webdriver.Chrome(options=options)
     return chrome_browser_obj
 
 # Define login function
@@ -233,7 +228,7 @@ def checkBingLogin(browser: WebDriver, isMobile: bool = False):
                 try:
                     POINTS_COUNTER = int(browser.find_element(By.ID, 'id_rc').get_attribute('innerHTML'))
                 except ValueError:
-                    if isElementExists(browser, By.ID, 'id_s'):
+                    if browser.find_element(By.ID, 'id_s').is_displayed():
                         browser.find_element(By.ID, 'id_s').click()
                         time.sleep(15)
                         checkBingLogin(browser, isMobile)
@@ -255,7 +250,10 @@ def checkBingLogin(browser: WebDriver, isMobile: bool = False):
     if isMobile:
         # close bing app banner
         if isElementExists(browser, By.ID, 'bnp_rich_div'):
-            browser.find_element(By.XPATH, '//*[@id="bnp_bop_close_icon"]/img').click()
+            try:
+                browser.find_element(By.XPATH, '//*[@id="bnp_bop_close_icon"]/img').click()
+            except NoSuchElementException:
+                pass
         try:
             time.sleep(1)
             browser.find_element(By.ID, 'mHamburger').click()
@@ -302,7 +300,7 @@ def checkBingLogin(browser: WebDriver, isMobile: bool = False):
             try:
                 POINTS_COUNTER = int(browser.find_element(By.ID, 'id_rc').get_attribute('innerHTML'))
             except:
-                if isElementExists(browser, By.ID, 'id_s'):
+                if browser.find_element(By.ID, 'id_s').is_displayed():
                     browser.find_element(By.ID, 'id_s').click()
                     time.sleep(15)
                     checkBingLogin(browser, isMobile)
@@ -1050,18 +1048,6 @@ def argumentParser():
                         help="[Optional] Reduce delays where ever it's possible to make script faster.",
                         action='store_true',
                         required=False)
-    parser.add_argument('--accounts',
-                        help='[Optional] Add accounts.',
-                        nargs="*",
-                        required=False)
-    parser.add_argument('--proxies',
-                        help='[Optional] Add proxies.',
-                        nargs="*",
-                        required=False)
-    parser.add_argument('--privacy',
-                        help='[Optional] Enable privacy mode.',
-                        action='store_true',
-                        required=False)
     args = parser.parse_args()
     if args.everyday:
         if isinstance(validateTime(args.everyday), str):
@@ -1071,7 +1057,7 @@ def argumentParser():
     if args.fast:
         global FAST
         FAST = True
-    if len(sys.argv) > 1 and not args.privacy:
+    if len(sys.argv) > 1:
         for arg in vars(args):
             prBlue(f"[INFO] {arg} : {getattr(args, arg)}")
     return args
@@ -1084,7 +1070,8 @@ def logs():
     shared_items =[]
     try:
         # Read datas on 'logs_accounts.txt'
-        LOGS = json.load(open(f"logs.txt", "r"))
+        LOGS = json.load(open(f"{Path(__file__).parent}/Logs_{account_path.stem}.txt", "r"))
+        LOGS.pop("Elapsed time", None)
         # sync accounts and logs file for new accounts or remove accounts from logs.
         for user in ACCOUNTS:
             shared_items.append(user['username'])
@@ -1114,7 +1101,7 @@ def logs():
         updateLogs()               
         prGreen('\n[LOGS] Logs loaded successfully.\n')
     except FileNotFoundError:
-        prRed(f'\n[LOGS] "logs.txt" file not found.')
+        prRed(f'\n[LOGS] "Logs_{account_path.stem}.txt" file not found.')
         LOGS = {}
         for account in ACCOUNTS:
             LOGS[account["username"]] = {"Last check": "",
@@ -1125,11 +1112,10 @@ def logs():
                                         "More promotions": False,
                                         "PC searches": False}
         updateLogs()
-        prGreen(f'[LOGS] "logs.txt" created.\n')
+        prGreen(f'[LOGS] "Logs_{account_path.stem}.txt" created.\n')
         
 def updateLogs():
-    global LOGS
-    with open(f'logs.txt', 'w') as file:
+    with open(f'{Path(__file__).parent}/Logs_{account_path.stem}.txt', 'w') as file:
         file.write(json.dumps(LOGS, indent = 4))
 
 def cleanLogs():
@@ -1162,28 +1148,31 @@ def prBlue(prt):
 def prPurple(prt):
     print(f"\033[95m{prt}\033[00m")
 
+def logo():
+    prRed("""
+    ███╗   ███╗███████╗    ███████╗ █████╗ ██████╗ ███╗   ███╗███████╗██████╗ 
+    ████╗ ████║██╔════╝    ██╔════╝██╔══██╗██╔══██╗████╗ ████║██╔════╝██╔══██╗
+    ██╔████╔██║███████╗    █████╗  ███████║██████╔╝██╔████╔██║█████╗  ██████╔╝
+    ██║╚██╔╝██║╚════██║    ██╔══╝  ██╔══██║██╔══██╗██║╚██╔╝██║██╔══╝  ██╔══██╗
+    ██║ ╚═╝ ██║███████║    ██║     ██║  ██║██║  ██║██║ ╚═╝ ██║███████╗██║  ██║
+    ╚═╝     ╚═╝╚══════╝    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚═╝  ╚═╝""")
+    prPurple("            by @Charlesbel upgraded by @Farshadz1997        version 2.1\n")
 
-def loadAccounts():
-    global ACCOUNTS
-    if ARGS.accounts:
-        ACCOUNTS = []
-        for account in ARGS.accounts:
-            ACCOUNTS.append({"username": account.split(":")[0], "password": account.split(":")[1]})
-    else:
-        try:
-            ACCOUNTS = json.load(open("accounts.json", "r"))
-        except FileNotFoundError:
-            with open("accounts.json", 'w') as f:
-                f.write(json.dumps([{
-                    "username": "Your Email",
-                    "password": "Your Password"
-                }], indent=4))
-            prPurple(f"""
-        [ACCOUNT] Accounts credential file "accounts.json" created.
-        [ACCOUNT] Edit with your credentials and save, then press any key to continue...
-            """)
-            input()
-            ACCOUNTS = json.load(open("accounts.json", "r"))
+try:
+    account_path = Path(__file__).parent / 'accounts.json'
+    ACCOUNTS = json.load(open(account_path, "r"))
+except FileNotFoundError:
+    with open(account_path, 'w') as f:
+        f.write(json.dumps([{
+            "username": "Your Email",
+            "password": "Your Password"
+        }], indent=4))
+    prPurple(f"""
+[ACCOUNT] Accounts credential file "{account_path.name}" created.
+[ACCOUNT] Edit with your credentials and save, then press any key to continue...
+    """)
+    input()
+    ACCOUNTS = json.load(open(account_path, "r"))
 
 def farmer():
     '''
@@ -1198,10 +1187,9 @@ def farmer():
             if LOGS[CURRENT_ACCOUNT]["Last check"] != str(date.today()):
                 LOGS[CURRENT_ACCOUNT]["Last check"] = str(date.today())
                 updateLogs()
-            if not ARGS.privacy:
-                prYellow('********************' + CURRENT_ACCOUNT + '********************')
+            prYellow('********************' + CURRENT_ACCOUNT + '********************')
             if not LOGS[CURRENT_ACCOUNT]['PC searches']:
-                browser = browserSetup(False, PC_USER_AGENT, random.choice(ARGS.proxies) if ARGS.proxies else None)
+                browser = browserSetup(False, PC_USER_AGENT)
                 print('[LOGIN]', 'Logging-in...')
                 login(browser, account['username'], account['password'])
                 prGreen('[LOGIN] Logged-in successfully !')
@@ -1215,7 +1203,7 @@ def farmer():
                 if not LOGS[CURRENT_ACCOUNT]['More promotions']:
                     completeMorePromotions(browser)
                 remainingSearches, remainingSearchesM = getRemainingSearches(browser)
-                MOBILE = True if remainingSearchesM != 0 else False
+                MOBILE = bool(remainingSearchesM)
                 if remainingSearches != 0:
                     print('[BING]', 'Starting Desktop and Edge Bing searches...')
                     bingSearches(browser, remainingSearches)
@@ -1226,7 +1214,7 @@ def farmer():
                 browser.quit()
 
             if MOBILE:
-                browser = browserSetup(True, account.get('mobile_user_agent', MOBILE_USER_AGENT), random.choice(ARGS.proxies) if ARGS.proxies else None)
+                browser = browserSetup(True, account.get('mobile_user_agent', MOBILE_USER_AGENT))
                 print('[LOGIN]', 'Logging-in...')
                 login(browser, account['username'], account['password'], True)
                 prGreen('[LOGIN] Logged-in successfully !')
@@ -1278,19 +1266,15 @@ def farmer():
 def main():
     global LANG, GEO, TZ, ARGS
     # show colors in terminal
-    if os.name == 'nt':
-        os.system('color')
+    os.system('color')
+    logo()
     # Get the arguments from the command line
     ARGS = argumentParser()
     LANG, GEO, TZ = getCCodeLangAndOffset()
-    # load accounts
-    loadAccounts()
     # set time to launch the program if everyday is not set
     if not ARGS.everyday:
-        if sys.stdout.isatty():
-            answer = input('''If you want to run the program at a specific time, type your desired time in 24h format (HH:MM) else press Enter (\033[93manything other than time causes the script to start immediately\033[00m): ''')
-        else:
-            answer = ""
+        answer = input('''If you want to run the program at a specific time, type your desired time in 24h format (HH:MM) else press Enter
+(\033[93manything other than time causes the script to start immediately\033[00m): ''')
         run_on = validateTime(answer)
     else:
         run_on = ARGS.everyday
@@ -1311,9 +1295,10 @@ def main():
     delta = end - start
     hour, remain = divmod(delta, 3600)
     min, sec = divmod(remain, 60)
-    print(f"The script took : {hour:02.0f}:{min:02.0f}:{sec:02.0f}")
-    if sys.stdout.isatty():
-        input('Press any key to close the program...')
+    print(f"The farmer takes : {hour:02.0f}:{min:02.0f}:{sec:02.0f}")
+    LOGS["Elapsed time"] = f"{hour:02.0f}:{min:02.0f}:{sec:02.0f}"
+    updateLogs()
+    input('Press any key to close the program...')
           
 if __name__ == '__main__':
     main()
