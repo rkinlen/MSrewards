@@ -1,0 +1,79 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+2
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+3
+​
+4
+name: Python application
+5
+​
+6
+on:
+7
+  push:
+8
+    branches: [ "main" ]
+9
+  pull_request:
+10
+    branches: [ "main" ]
+11
+​
+12
+permissions:
+13
+  contents: read
+14
+​
+15
+jobs:
+16
+  build:
+17
+​
+18
+    runs-on: ubuntu-latest
+19
+​
+20
+    steps:
+21
+    - uses: actions/checkout@v3
+22
+    - name: Set up Python 3.10
+23
+      uses: actions/setup-python@v3
+24
+      with:
+25
+        python-version: "3.10"
+26
+    - name: Install dependencies
+27
+      run: |
+28
+        python -m pip install --upgrade pip
+29
+        python -m pip install -r requirements.txt
+30
+        pip install flake8 pytest
+31
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+32
+    - name: Lint with flake8
+33
+      run: |
+34
+        # stop the build if there are Python syntax errors or undefined names
+35
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+36
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+37
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+38
+    - name: Test with pytest
+39
+      run: |
+40
+        python .github/workflows MicrosftRewardsBot.py --headless --fast
