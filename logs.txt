@@ -1,7 +1,0 @@
-{
-    "rorykinlen@hotmail.com": {
-        "Last check": "2022-11-06",
-        "Today's points": 202,
-        "Points": 7254
-    }
-}
